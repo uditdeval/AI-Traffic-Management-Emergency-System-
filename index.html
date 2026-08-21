@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRAFIQ — Smart Traffic Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F3F5F9;
+  --panel:#FFFFFF;
+  --panel-alt:#FAFBFD;
+  --border:#E3E7EF;
+  --border-soft:#EDF0F5;
+  --text:#161A22;
+  --text-dim:#5B6478;
+  --text-faint:#9AA2B4;
+  --cyan:#0891A8;
+  --cyan-soft:#E4F6F9;
+  --amber:#C2790C;
+  --amber-soft:#FCF1DF;
+  --red:#D6393F;
+  --red-soft:#FCEAEA;
+  --green:#0E8F60;
+  --green-soft:#E4F6EE;
+  --mono:'JetBrains Mono',monospace;
+  --disp:'Space Grotesk',sans-serif;
+  --body:'Inter',sans-serif;
+  --shadow:0 1px 2px rgba(20,24,33,0.04), 0 8px 24px -12px rgba(20,24,33,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+html[data-theme="dark"]{
+  --bg:#0A0D12; --panel:#10141C; --panel-alt:#141924;
+  --border:#212736; --border-soft:#1a2030;
+  --text:#E7EAF2; --text-dim:#8891A6; --text-faint:#586178;
+  --cyan:#4FD1E8; --cyan-soft:rgba(79,209,232,0.12);
+  --amber:#F5A93F; --amber-soft:rgba(245,169,63,0.12);
+  --red:#F0555B; --red-soft:rgba(240,85,91,0.14);
+  --green:#3ED598; --green-soft:rgba(62,213,152,0.12);
+  --shadow:0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.6);
+}
+html[data-theme="dark"] .topbar{background:rgba(16,20,28,0.85);}
+html[data-theme="dark"] .navtab.active{background:var(--cyan);color:#06121A;}
+html[data-theme="dark"] .btn.primary{background:var(--cyan);color:#06121A;border-color:var(--cyan);}
+html[data-theme="dark"] .btn.primary:hover{background:#6BDCEF;}
+html[data-theme="dark"] .junction-stage{background:radial-gradient(circle at 50% 50%, #0d1119 0%, #090c11 75%);}
+body.compact section{padding:22px 0;}
+body.compact .panel{padding:14px;}
+body.compact .hero{padding-top:20px;}
+body{
+  background:
+    radial-gradient(1000px 500px at 12% -8%, rgba(8,145,168,0.05), transparent),
+    radial-gradient(800px 450px at 100% 0%, rgba(194,121,12,0.04), transparent),
+    var(--bg);
+  color:var(--text);
+  font-family:var(--body);
+  line-height:1.5;
+  min-height:100vh;
+}
+.wrap{max-width:1320px;margin:0 auto;padding:0 28px;}
+a{color:inherit;}
+
+/* ---------- top bar ---------- */
+.topbar{
+  border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,0.85);
+  backdrop-filter:blur(10px);
+  position:sticky;top:0;z-index:100;
+}
+.topbar-inner{display:flex;align-items:center;gap:24px;padding:14px 28px;max-width:1320px;margin:0 auto;}
+.brand{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+.brand-mark{width:28px;height:28px;flex-shrink:0;}
+.brand-name{font-family:var(--disp);font-weight:700;font-size:18px;letter-spacing:0.3px;}
+.brand-name span{color:var(--amber);}
+
+.navtabs{display:flex;gap:2px;background:var(--panel-alt);border:1px solid var(--border);border-radius:10px;padding:3px;}
+.navtab{
+  font-family:var(--body);font-weight:600;font-size:13px;color:var(--text-dim);
+  padding:8px 15px;border-radius:8px;cursor:pointer;border:none;background:transparent;
+  transition:background .15s, color .15s;
+}
+.navtab.active{background:var(--text);color:#fff;}
+.navtab:not(.active):hover{background:#fff;color:var(--text);}
+
+.topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto;}
+.searchbox{
+  display:flex;align-items:center;gap:7px;background:var(--panel-alt);border:1px solid var(--border);
+  border-radius:9px;padding:8px 12px;width:190px;
+}
+.searchbox input{border:none;background:transparent;outline:none;font-size:12.5px;font-family:var(--body);color:var(--text);width:100%;}
+.searchbox svg{width:14px;height:14px;color:var(--text-faint);flex-shrink:0;}
+.icon-btn{
+  position:relative;width:36px;height:36px;border-radius:9px;border:1px solid var(--border);background:var(--panel);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);
+}
+.icon-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.icon-btn svg{width:16px;height:16px;}
+.badge-dot{position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid #fff;}
+.avatar{
+  width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),#0B4F5C);
+  color:#fff;font-family:var(--disp);font-weight:700;font-size:12.5px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;
+}
+
+.dropdown{
+  position:absolute;top:52px;right:28px;width:320px;background:var(--panel);border:1px solid var(--border);
+  border-radius:12px;box-shadow:var(--shadow);display:none;z-index:200;overflow:hidden;
+}
+.dropdown.show{display:block;}
+.dropdown-head{padding:14px 16px;border-bottom:1px solid var(--border-soft);font-family:var(--disp);font-weight:600;font-size:13.5px;}
+.dropdown-item{padding:12px 16px;border-bottom:1px solid var(--border-soft);display:flex;gap:10px;align-items:flex-start;}
+.dropdown-item:last-child{border-bottom:none;}
+.dropdown-item .di-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+.dropdown-item .di-t{font-size:12.5px;font-weight:600;}
+.dropdown-item .di-s{font-size:11.5px;color:var(--text-faint);margin-top:2px;font-family:var(--mono);}
+
+.status-pills{display:none;}
+@media(max-width:1080px){.navtabs{display:none;} .searchbox{display:none;}}
+
+/* ---------- section shell ---------- */
+.view{display:none;}
+.view.active{display:block;}
+section{padding:44px 0;}
+.eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--cyan);margin-bottom:10px;display:flex;align-items:center;gap:10px;
+}
+.eyebrow::before{content:'';width:16px;height:1px;background:var(--cyan);}
+h1{font-family:var(--disp);font-size:40px;font-weight:700;letter-spacing:-0.5px;line-height:1.1;}
+h2{font-family:var(--disp);font-size:24px;font-weight:600;letter-spacing:-0.3px;}
+.sub{color:var(--text-dim);font-size:15px;max-width:560px;margin-top:12px;}
+
+/* ---------- hero ---------- */
+.hero{padding-top:40px;padding-bottom:20px;}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:20px;margin-bottom:32px;}
+.hero-cta{display:flex;gap:10px;}
+.btn{
+  font-family:var(--body);font-weight:600;font-size:13px;
+  padding:10px 17px;border-radius:9px;border:1px solid var(--border);
+  color:var(--text);background:var(--panel);cursor:pointer;
+  transition:border-color .15s, transform .15s, background .15s;
+}
+.btn:hover{border-color:var(--cyan);transform:translateY(-1px);}
+.btn.primary{background:var(--text);color:#fff;border-color:var(--text);}
+.btn.primary:hover{background:#000;}
+.btn.small{padding:7px 12px;font-size:12px;}
+
+.hero-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:20px;}
+@media(max-width:980px){.hero-grid{grid-template-columns:1fr;}}
+
+.panel{
+  background:var(--panel);
+  border:1px solid var(--border);border-radius:16px;
+  padding:22px;position:relative;overflow:hidden;
+  box-shadow:var(--shadow);
+}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;}
+.panel-title{font-family:var(--disp);font-weight:600;font-size:15px;letter-spacing:0.2px;}
+.panel-tag{font-family:var(--mono);font-size:10.5px;color:var(--text-faint);letter-spacing:0.5px;margin-top:2px;}
+
+/* junction visualization */
+.junction-stage{
+  position:relative;aspect-ratio:4/3;max-height:400px;
+  background:radial-gradient(circle at 50% 50%, #FCFDFE 0%, #F3F5F9 75%);
+  border-radius:12px;border:1px solid var(--border-soft);
+}
+.junction-svg{width:100%;height:100%;}
+.readout-row{display:flex;gap:14px;margin-top:18px;flex-wrap:wrap;}
+.readout{flex:1;min-width:120px;}
+.readout-label{font-family:var(--mono);font-size:10px;letter-spacing:0.6px;color:var(--text-faint);text-transform:uppercase;}
+.readout-val{font-family:var(--mono);font-size:25px;font-weight:700;margin-top:4px;}
+.readout-val.cyan{color:var(--cyan);}
+.readout-val.amber{color:var(--amber);}
+.readout-val.green{color:var(--green);}
+
+.rec-panel{display:flex;flex-direction:column;justify-content:space-between;}
+.rec-big{text-align:center;padding:18px 0 12px;}
+.rec-label{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;}
+.rec-num{font-family:var(--disp);font-weight:700;font-size:60px;line-height:1;margin:10px 0 4px;color:var(--text);}
+.rec-unit{font-family:var(--mono);color:var(--text-dim);font-size:13px;}
+.density-badge{
+  display:inline-flex;align-items:center;gap:8px;margin:14px auto 0;
+  font-family:var(--mono);font-size:12px;letter-spacing:0.5px;padding:7px 14px;border-radius:20px;font-weight:600;
+}
+.density-badge.HIGH{background:var(--red-soft);color:var(--red);}
+.density-badge.MEDIUM{background:var(--amber-soft);color:var(--amber);}
+.density-badge.LOW{background:var(--green-soft);color:var(--green);}
+.mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px;}
+.mini-stat{background:var(--panel-alt);border:1px solid var(--border-soft);border-radius:10px;padding:12px 14px;}
+.mini-stat .n{font-family:var(--mono);font-size:19px;font-weight:700;}
+.mini-stat .l{font-family:var(--mono);font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;}
+
+.emg-banner{
+  display:flex;align-items:center;gap:10px;margin-top:16px;padding:10px 14px;border-radius:10px;
+  background:var(--red-soft);border:1px solid #F3C6C6;
+  font-family:var(--mono);font-size:12px;color:#A8262C;opacity:0;max-height:0;overflow:hidden;
+  transition:opacity .3s, max-height .3s, padding .3s, margin .3s;
+}
+.emg-banner.show{opacity:1;max-height:60px;padding:10px 14px;}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;animation:pulse 1.1s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(214,57,63,.4);}50%{box-shadow:0 0 0 6px rgba(214,57,63,0);}}
+
+/* ---------- metric cards ---------- */
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+@media(max-width:900px){.metrics-grid{grid-template-columns:repeat(2,1fr);}}
+.mcard{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow);}
+.mcard-label{font-family:var(--mono);font-size:10.5px;letter-spacing:0.6px;text-transform:uppercase;color:var(--text-faint);}
+.mcard-val{font-family:var(--disp);font-size:32px;font-weight:700;margin-top:12px;}
+.mcard-delta{font-family:var(--mono);font-size:11.5px;color:var(--text-dim);margin-top:4px;}
+.mcard-delta.up{color:var(--red);}
+.mcard-delta.down{color:var(--green);}
+
+/* ---------- charts row ---------- */
+.charts-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;}
+@media(max-width:980px){.charts-grid{grid-template-columns:1fr;}}
+.chart-box{height:250px;position:relative;}
+.legend-row{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11.5px;color:var(--text-dim);}
+.legend-swatch{width:9px;height:9px;border-radius:2px;}
+
+/* ---------- pipeline ---------- */
+.pipeline{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding-bottom:6px;}
+.pnode{flex:1;min-width:150px;text-align:center;position:relative;padding:0 8px;}
+.pnode .num{font-family:var(--mono);color:var(--text-faint);font-size:11px;}
+.pnode .lbl{font-family:var(--disp);font-weight:600;font-size:14px;margin-top:8px;}
+.pnode .desc{font-family:var(--body);font-size:12px;color:var(--text-dim);margin-top:6px;line-height:1.4;}
+.parrow{color:var(--text-faint);font-size:18px;flex-shrink:0;padding:0 2px;margin-top:22px;}
+
+/* ---------- junction table ---------- */
+.jtable{width:100%;border-collapse:collapse;}
+.jtable th{
+  font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px;
+  color:var(--text-faint);text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);
+}
+.jtable td{padding:14px;border-bottom:1px solid var(--border-soft);font-size:13.5px;}
+.jtable tr:last-child td{border-bottom:none;}
+.jtable tr:hover td{background:var(--panel-alt);}
+.jname{font-family:var(--disp);font-weight:600;}
+.jstatus{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11.5px;}
+.jnum{font-family:var(--mono);}
+.densechip{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:12px;font-weight:600;}
+.densechip.HIGH{background:var(--red-soft);color:var(--red);}
+.densechip.MEDIUM{background:var(--amber-soft);color:var(--amber);}
+.densechip.LOW{background:var(--green-soft);color:var(--green);}
+
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dot.on{background:var(--green);}
+.dot.warn{background:var(--amber);}
+.dot.off{background:var(--red);}
+
+/* ---------- upload page ---------- */
+.upload-zone{
+  border:1.5px dashed #C7CDDA;border-radius:16px;padding:48px 20px;text-align:center;
+  transition:border-color .2s, background .2s; cursor:pointer;
+}
+.upload-zone.drag{border-color:var(--cyan);background:var(--cyan-soft);}
+.upload-zone:hover{border-color:var(--cyan);}
+.upload-zone svg{width:36px;height:36px;margin-bottom:12px;color:var(--text-faint);}
+.upload-zone .t1{font-family:var(--disp);font-weight:600;font-size:16px;}
+.upload-zone .t2{font-family:var(--mono);font-size:11.5px;color:var(--text-faint);margin-top:6px;}
+.upload-zone .t3{font-family:var(--body);font-size:12px;color:var(--text-faint);margin-top:14px;}
+
+.file-row{
+  display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--border);
+  border-radius:11px;margin-top:14px;background:var(--panel-alt);
+}
+.file-icon{width:36px;height:36px;border-radius:8px;background:var(--cyan-soft);color:var(--cyan);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.file-icon svg{width:17px;height:17px;}
+.file-meta{flex:1;min-width:0;}
+.file-name{font-family:var(--body);font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.file-size{font-family:var(--mono);font-size:11px;color:var(--text-faint);margin-top:2px;}
+.file-remove{width:26px;height:26px;border-radius:7px;border:1px solid var(--border);background:#fff;color:var(--text-faint);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.file-remove:hover{color:var(--red);border-color:#F3C6C6;}
+
+.progress-wrap{margin-top:16px;display:none;}
+.progress-wrap.show{display:block;}
+.progress-label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11.5px;color:var(--text-dim);margin-bottom:7px;}
+.progress-track{height:7px;border-radius:6px;background:var(--border-soft);overflow:hidden;}
+.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),#0B4F5C);border-radius:6px;transition:width .3s;}
+.stage-list{margin-top:14px;display:flex;flex-direction:column;gap:8px;}
+.stage-item{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12px;color:var(--text-faint);}
+.stage-item .si-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;position:relative;}
+.stage-item.active .si-dot{border-color:var(--cyan);}
+.stage-item.active{color:var(--text);}
+.stage-item.done .si-dot{background:var(--green);border-color:var(--green);}
+.stage-item.done{color:var(--text);}
+.stage-item.done .si-dot::after{content:'✓';position:absolute;inset:0;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;}
+
+.result-card{
+  display:none;margin-top:20px;padding-top:20px;border-top:1px solid var(--border-soft);
+}
+.result-card.show{display:block;}
+.result-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px;}
+@media(max-width:700px){.result-grid{grid-template-columns:repeat(2,1fr);}}
+.result-chip{background:var(--panel-alt);border:1px solid var(--border-soft);border-radius:10px;padding:14px;text-align:center;}
+.result-chip .n{font-family:var(--disp);font-weight:700;font-size:22px;}
+.result-chip .l{font-family:var(--mono);font-size:10px;color:var(--text-faint);text-transform:uppercase;margin-top:3px;}
+
+/* ---------- settings page ---------- */
+.settings-list{display:flex;flex-direction:column;}
+.settings-row{
+  display:flex;justify-content:space-between;align-items:center;gap:20px;
+  padding:16px 4px;border-bottom:1px solid var(--border-soft);
+}
+.settings-row:last-child{border-bottom:none;}
+.settings-row .st{font-family:var(--body);font-weight:600;font-size:13.5px;}
+.settings-row .sd{font-family:var(--body);font-size:12px;color:var(--text-dim);margin-top:3px;max-width:420px;}
+.toggle{width:42px;height:24px;border-radius:14px;background:var(--border);position:relative;cursor:pointer;flex-shrink:0;transition:background .2s;}
+.toggle.on{background:var(--green);}
+.toggle .knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s;}
+.toggle.on .knob{left:21px;}
+.slider-row input[type=range]{width:180px;accent-color:var(--cyan);}
+.theme-swatches{display:flex;gap:10px;}
+.tswatch{width:52px;height:34px;border-radius:8px;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;color:var(--text-faint);}
+.tswatch.active{border-color:var(--cyan);color:var(--cyan);font-weight:700;}
+.tswatch.light{background:linear-gradient(135deg,#fff,#eef1f6);}
+.tswatch.dark{background:linear-gradient(135deg,#0A0D12,#1a2030);color:#8891A6;}
+
+footer{border-top:1px solid var(--border);padding:28px 0;margin-top:10px;}
+.foot-row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;color:var(--text-faint);font-family:var(--mono);font-size:11.5px;}
+
+::-webkit-scrollbar{height:6px;width:6px;}
+::-webkit-scrollbar-thumb{background:#D4D9E3;border-radius:4px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 30 30" fill="none">
+        <rect x="12" y="2" width="6" height="26" rx="3" fill="#F3F5F9" stroke="#E3E7EF"/>
+        <circle cx="15" cy="8" r="3" fill="#D6393F"/>
+        <circle cx="15" cy="15" r="3" fill="#C2790C"/>
+        <circle cx="15" cy="22" r="3" fill="#0E8F60"/>
+      </svg>
+      <div class="brand-name">TRAF<span>IQ</span></div>
+    </div>
+    <div class="navtabs" id="navtabs">
+      <button class="navtab active" data-view="dashboard">Dashboard</button>
+      <button class="navtab" data-view="upload">Upload &amp; Analyze</button>
+      <button class="navtab" data-view="junctions">Junctions</button>
+      <button class="navtab" data-view="settings">Settings</button>
+    </div>
+    <div class="topbar-right">
+      <div class="searchbox">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" placeholder="Search junctions..." id="searchInput">
+      </div>
+      <div class="icon-btn" id="notifBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+        <span class="badge-dot"></span>
+      </div>
+      <div class="dropdown" id="notifDropdown">
+        <div class="dropdown-head">Alerts</div>
+        <div id="alertsList"></div>
+      </div>
+      <div class="avatar" id="avatarBtn">SO</div>
+      <div class="dropdown" id="userDropdown" style="width:190px;">
+        <div class="dropdown-item" style="border:none;"><div><div class="di-t" id="userNameLabel">Signal Operator</div><div class="di-s" id="userEmailLabel">ops@trafiq.city</div></div></div>
+        <div class="dropdown-item" style="cursor:pointer;" id="accountSettingsLink">Account settings</div>
+        <div class="dropdown-item" style="cursor:pointer;border:none;" id="signOutLink">Sign out</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ============ DASHBOARD VIEW ============ -->
+<div class="view active" id="view-dashboard">
+
+  <section class="hero">
+    <div class="hero-top">
+      <div>
+        <div class="eyebrow">AI-Powered Traffic Intelligence</div>
+        <h1>Junction <span id="heroJunctionName">MG&nbsp;Road &amp; 5th&nbsp;Ave</span><br>is running <span id="heroDensityWord">HIGH</span> density.</h1>
+        <p class="sub">AI computer-vision analysis of uploaded junction video, converted into vehicle counts, queue estimates and adaptive green-time recommendations.</p>
+      </div>
+      <div class="hero-cta">
+        <button class="btn" data-goto="junctions">View all junctions</button>
+        <button class="btn primary" data-goto="upload">+ Analyze a video</button>
+      </div>
+    </div>
+
+    <div class="hero-grid">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Live Junction View</div>
+            <div class="panel-tag" id="heroCamTag">CAM-04 · MG ROAD ↔ 5TH AVE · LATEST AI ANALYSIS</div>
+          </div>
+          <div class="btn small" style="cursor:default;"><span class="dot on" style="display:inline-block;margin-right:6px;"></span><span id="trackingStatus">BACKEND CONNECTING</span></div>
+        </div>
+        <div class="junction-stage">
+          <svg class="junction-svg" viewBox="0 0 400 300" id="junctionSvg">
+            <rect x="0" y="120" width="400" height="60" fill="#EDF0F5"/>
+            <rect x="170" y="0" width="60" height="300" fill="#EDF0F5"/>
+            <g stroke="#D4D9E3" stroke-width="2" stroke-dasharray="8 8">
+              <line x1="0" y1="150" x2="400" y2="150"/>
+              <line x1="200" y1="0" x2="200" y2="300"/>
+            </g>
+            <rect id="qNorth" x="176" y="10" width="48" height="0" fill="rgba(214,57,63,0.16)"/>
+            <rect id="qSouth" x="176" y="290" width="48" height="0" fill="rgba(214,57,63,0.16)"/>
+            <rect id="qWest"  x="10" y="126" width="0" height="48" fill="rgba(214,57,63,0.16)"/>
+            <rect id="qEast"  x="390" y="126" width="0" height="48" fill="rgba(214,57,63,0.16)"/>
+            <circle cx="200" cy="150" r="22" fill="#fff" stroke="#E3E7EF"/>
+            <circle id="sigLight" cx="200" cy="150" r="9" fill="#0E8F60"/>
+            <circle cx="200" cy="150" r="17" fill="none" stroke="#E3E7EF" stroke-width="2"/>
+            <circle id="sigRing" cx="200" cy="150" r="17" fill="none" stroke="#0E8F60" stroke-width="2"
+              stroke-dasharray="106.8" stroke-dashoffset="0" transform="rotate(-90 200 150)"/>
+            <g id="vehicles"></g>
+          </svg>
+        </div>
+        <div class="readout-row">
+          <div class="readout"><div class="readout-label">Phase</div><div class="readout-val cyan" id="phaseVal">N–S GREEN</div></div>
+          <div class="readout"><div class="readout-label">Countdown</div><div class="readout-val amber" id="countdownVal">42s</div></div>
+          <div class="readout"><div class="readout-label">Queue (max arm)</div><div class="readout-val green" id="queueVal">38 m</div></div>
+        </div>
+        <div class="emg-banner" id="emgBanner"><span class="pulse"></span><span id="emgText">Ambulance detected — East approach. Priority green recommended.</span></div>
+      </div>
+
+      <div class="panel rec-panel">
+        <div class="panel-head">
+          <div><div class="panel-title">Signal Optimizer</div><div class="panel-tag">RECOMMENDATION ENGINE</div></div>
+        </div>
+        <div class="rec-big">
+          <div class="rec-label">Recommended Green Time</div>
+          <div class="rec-num"><span id="recTime">78</span></div>
+          <div class="rec-unit">SECONDS</div>
+          <div class="density-badge HIGH" id="densityBadge">● HIGH DENSITY</div>
+        </div>
+        <div class="mini-stats">
+          <div class="mini-stat"><div class="n" id="totVeh">54</div><div class="l">Total Vehicles</div></div>
+          <div class="mini-stat"><div class="n" id="queueLen">60m</div><div class="l">Queue Length</div></div>
+          <div class="mini-stat"><div class="n" id="avgSpeed">14</div><div class="l" id="avgSpeedLabel">Avg Speed km/h</div></div>
+          <div class="mini-stat"><div class="n" id="waitTime">96s</div><div class="l">Avg Wait Time</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="metrics-grid">
+      <div class="mcard"><div class="mcard-label">Cars</div><div class="mcard-val" id="mCars">35</div><div class="mcard-delta up" id="dCars">↑ 4 vs last min</div></div>
+      <div class="mcard"><div class="mcard-label">Motorcycles</div><div class="mcard-val" id="mBikes">12</div><div class="mcard-delta down" id="dBikes">↓ 2 vs last min</div></div>
+      <div class="mcard"><div class="mcard-label">Buses</div><div class="mcard-val" id="mBuses">3</div><div class="mcard-delta" id="dBuses">→ steady</div></div>
+      <div class="mcard"><div class="mcard-label">Trucks</div><div class="mcard-val" id="mTrucks">4</div><div class="mcard-delta up" id="dTrucks">↑ 1 vs last min</div></div>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="charts-grid">
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">Traffic Volume — Last 15 Minutes</div><div class="panel-tag">VEHICLES / MIN · LIVE</div></div></div>
+        <div class="chart-box"><canvas id="volumeChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">Vehicle Class Mix</div><div class="panel-tag">CURRENT FRAME</div></div></div>
+        <div class="chart-box"><canvas id="mixChart"></canvas></div>
+        <div class="legend-row" id="mixLegend"></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ============ UPLOAD VIEW ============ -->
+<div class="view" id="view-upload">
+  <section style="padding-top:40px;">
+    <div class="eyebrow">Analyze a Traffic Video</div>
+    <h1 style="font-size:32px;">Upload footage for AI analysis.</h1>
+    <p class="sub">Upload a junction video. The FastAPI backend runs YOLO detection/tracking, computes traffic intelligence, and returns a signal recommendation.</p>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="hero-grid">
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">Upload Video</div><div class="panel-tag">MP4 · AVI · MOV · MKV</div></div></div>
+
+        <div class="upload-zone" id="dropZone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12m0-12l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          <div class="t1">Drop your video here, or click to browse</div>
+          <div class="t2">MP4, AVI, MOV, MKV — up to 500MB</div>
+          <div class="t3">Video is uploaded securely to the TRAFIQ backend for real AI analysis.</div>
+        </div>
+        <input type="file" id="fileInput" accept="video/*" style="display:none;">
+
+        <div id="fileRowHolder"></div>
+
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-label"><span id="progressStageLabel">Uploading…</span><span id="progressPct">0%</span></div>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="stage-list" id="stageList"></div>
+        </div>
+
+        <div class="result-card" id="resultCard">
+          <div class="panel-title" style="margin-bottom:6px;">Analysis Complete</div>
+          <div class="panel-tag" id="resultMeta">Processed 428 frames · 5 vehicle tracks</div>
+          <div class="result-grid" id="resultGrid"></div>
+          <div style="margin-top:16px;display:flex;gap:10px;">
+            <button class="btn primary" data-goto="dashboard">View on dashboard</button>
+            <button class="btn" id="analyzeAnother">Analyze another</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">Recent Analyses</div><div class="panel-tag" id="recentCount">0 THIS SESSION</div></div></div>
+        <table class="jtable" id="recentTable">
+          <thead><tr><th>File</th><th>Vehicles</th><th>Density</th><th>Rec. Green</th></tr></thead>
+          <tbody id="recentAnalysesBody">
+            <tr><td colspan="4" style="color:var(--text-faint);font-family:var(--mono);font-size:12px;">No analyses yet — upload a video to get started.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ JUNCTIONS VIEW ============ -->
+<div class="view" id="view-junctions">
+  <section style="padding-top:40px;">
+    <div class="eyebrow">City-wide Overview</div>
+    <h1 style="font-size:32px;">All junctions.</h1>
+    <p class="sub">Live status across every connected camera. Click a row to jump to its detail on the dashboard.</p>
+  </section>
+  <section style="padding-top:0;">
+    <div class="panel">
+      <div class="panel-head">
+        <div><div class="panel-title">Junctions</div><div class="panel-tag" id="junctionCountTag">5 CONNECTED</div></div>
+        <button class="btn small" id="addJunctionBtn">+ Add junction</button>
+      </div>
+      <table class="jtable">
+        <thead><tr><th>Junction</th><th>Status</th><th>Vehicles</th><th>Density</th><th>Queue</th><th>Rec. Green</th></tr></thead>
+        <tbody id="junctionRows"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- ============ SETTINGS VIEW ============ -->
+<div class="view" id="view-settings">
+  <section style="padding-top:40px;">
+    <div class="eyebrow">Preferences</div>
+    <h1 style="font-size:32px;">Settings.</h1>
+    <p class="sub">Control alert thresholds, notification behaviour and appearance.</p>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="hero-grid">
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">Alerts &amp; Thresholds</div></div></div>
+        <div class="settings-list">
+          <div class="settings-row">
+            <div><div class="st">High density alerts</div><div class="sd">Notify when a junction crosses into HIGH density.</div></div>
+            <div class="toggle on" data-toggle id="toggleHighDensity"><div class="knob"></div></div>
+          </div>
+          <div class="settings-row">
+            <div><div class="st">Emergency vehicle priority</div><div class="sd">Auto-recommend priority green when an ambulance or fire truck is detected.</div></div>
+            <div class="toggle on" data-toggle id="toggleEmergency"><div class="knob"></div></div>
+          </div>
+          <div class="settings-row">
+            <div><div class="st">Camera health alerts</div><div class="sd">Notify when a camera disconnects or a service degrades.</div></div>
+            <div class="toggle on" data-toggle id="toggleCameraHealth"><div class="knob"></div></div>
+          </div>
+          <div class="settings-row">
+            <div><div class="st">Weekly analytics email</div><div class="sd">Summary of traffic patterns and peak hours across all junctions.</div></div>
+            <div class="toggle" data-toggle id="toggleWeeklyEmail"><div class="knob"></div></div>
+          </div>
+          <div class="settings-row slider-row">
+            <div><div class="st">HIGH density threshold</div><div class="sd">Vehicles per frame that trigger a HIGH classification.</div></div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="range" min="30" max="80" value="50" id="thresholdSlider">
+              <span class="jnum" id="thresholdVal" style="font-family:var(--mono);font-weight:600;">50</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">Appearance</div></div></div>
+        <div class="settings-list">
+          <div class="settings-row">
+            <div><div class="st">Theme</div><div class="sd">Light is optimized for control-room daylight monitors.</div></div>
+            <div class="theme-swatches">
+              <div class="tswatch light active" data-theme="light">LIGHT</div>
+              <div class="tswatch dark" data-theme="dark">DARK</div>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div><div class="st">Compact mode</div><div class="sd">Reduce spacing to fit more junctions on screen.</div></div>
+            <div class="toggle" data-toggle id="toggleCompact"><div class="knob"></div></div>
+          </div>
+          <div class="settings-row">
+            <div><div class="st">Units</div><div class="sd">Distance and speed unit system.</div></div>
+            <button class="btn small" id="unitsBtn">Metric (km/h, m)</button>
+          </div>
+        </div>
+        <div class="panel-head" style="margin-top:22px;"><div><div class="panel-title">Account</div></div></div>
+        <div class="settings-list">
+          <div class="settings-row">
+            <div><div class="st" id="profileNameSetting">Signal Operator</div><div class="sd" id="profileEmailSetting">ops@trafiq.city · City Traffic Authority</div></div>
+            <button class="btn small" id="editProfileBtn">Edit profile</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="foot-row">
+    <span>TRAFIQ — AI Smart Traffic Management System</span>
+    <span>TRAFIQ control room · live backend analytics</span>
+    <span id="footClock">—</span>
+  </div>
+</footer>
+
+</div>
+
+
+<script>
+/* ================================================================
+   TRAFIQ REAL BACKEND INTEGRATION
+   Backend: FastAPI + SQLite + Ultralytics YOLO
+   API: /api/health, /api/dashboard, /api/junctions,
+        /api/analyze, /api/jobs/{id}, /api/analyses, /api/settings
+   ================================================================ */
+
+// Change this ONE line after deploying the backend to Render/Railway.
+window.TRAFIQ_API_BASE = window.TRAFIQ_API_BASE || 'https://ai-traffic-management-emergency-system.onrender.com';
+const API_BASE = window.TRAFIQ_API_BASE.replace(/\/$/, '');
+
+let selectedJunctionId = 'CAM-04';
+let junctions = [];
+let searchTerm = '';
+let unitSystem = localStorage.getItem('trafiq_units') || 'metric';
+let settings = {
+  high_density_alerts: true,
+  emergency_priority: true,
+  camera_health_alerts: true,
+  weekly_analytics_email: false,
+  high_density_threshold: 50,
+};
+let currentFileName = '';
+let currentObjectUrl = null;
+let currentDuration = 0;
+let analysisPollTimer = null;
+let alerts = [];
+
+const $ = (id) => document.getElementById(id);
+
+function apiUrl(path){ return API_BASE + path; }
+
+async function api(path, options = {}) {
+  const response = await fetch(apiUrl(path), options);
+  const text = await response.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!response.ok) {
+    const message = data?.detail || data?.message || `API error ${response.status}`;
+    throw new Error(message);
+  }
+  return data;
+}
+
+function showToast(msg, error=false){
+  let el = $('toastEl');
+  if(!el){
+    el = document.createElement('div');
+    el.id='toastEl';
+    el.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;font-family:var(--body);font-size:13px;font-weight:600;padding:11px 20px;border-radius:10px;box-shadow:var(--shadow);z-index:9999;opacity:0;transition:opacity .25s;max-width:min(90vw,560px);text-align:center;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.background = error ? 'var(--red)' : 'var(--text)';
+  el.style.opacity='1';
+  clearTimeout(window.toastTimer);
+  window.toastTimer=setTimeout(()=>el.style.opacity='0',2800);
+}
+
+/* ---------------- navigation ---------------- */
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const view = $('view-'+name);
+  if(view) view.classList.add('active');
+  document.querySelectorAll('.navtab').forEach(t=>t.classList.toggle('active', t.dataset.view===name));
+  window.scrollTo({top:0, behavior:'smooth'});
+  if(name==='junctions') renderJunctions();
+  if(name==='settings') loadSettings();
+  if(name==='upload') loadRecentAnalyses();
+}
+document.querySelectorAll('.navtab').forEach(t=>t.addEventListener('click',()=>showView(t.dataset.view)));
+document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',()=>showView(el.dataset.goto)));
+
+/* ---------------- dropdowns ---------------- */
+function toggleDropdown(btnId, ddId, otherId){
+  $(btnId).addEventListener('click',(e)=>{
+    e.stopPropagation();
+    $(otherId).classList.remove('show');
+    $(ddId).classList.toggle('show');
+  });
+}
+toggleDropdown('notifBtn','notifDropdown','userDropdown');
+toggleDropdown('avatarBtn','userDropdown','notifDropdown');
+document.addEventListener('click',()=>{
+  $('notifDropdown').classList.remove('show');
+  $('userDropdown').classList.remove('show');
+});
+
+/* ---------------- alerts ---------------- */
+function pushAlert(text, level='amber'){
+  alerts.unshift({text, level, time:'just now'});
+  alerts=alerts.slice(0,8);
+  renderAlerts();
+}
+function renderAlerts(){
+  $('alertsList').innerHTML = alerts.length ? alerts.map(a=>
+    `<div class="dropdown-item"><span class="di-dot" style="background:var(--${a.level})"></span><div><div class="di-t">${escapeHtml(a.text)}</div><div class="di-s">${escapeHtml(a.time)}</div></div></div>`
+  ).join('') : '<div class="dropdown-item"><div class="di-s">No active alerts.</div></div>';
+}
+$('notifBtn').addEventListener('click',()=>document.querySelector('.badge-dot').style.display='none');
+
+/* ---------------- profile ---------------- */
+$('accountSettingsLink').addEventListener('click',()=>showView('settings'));
+$('signOutLink').addEventListener('click',()=>{
+  $('userDropdown').classList.remove('show');
+  showToast('Demo sign-out only — authentication is not connected yet.');
+});
+$('editProfileBtn').addEventListener('click',()=>{
+  const name=prompt('Display name',$('userNameLabel').textContent);
+  if(!name?.trim()) return;
+  const clean=name.trim();
+  const initials=clean.split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  $('userNameLabel').textContent=clean;
+  $('avatarBtn').textContent=initials||'SO';
+  $('profileNameSetting').textContent=clean;
+  showToast('Profile updated locally.');
+});
+
+/* ---------------- search ---------------- */
+$('searchInput').addEventListener('input',(e)=>{
+  searchTerm=e.target.value.trim().toLowerCase();
+  showView('junctions');
+  renderJunctions();
+});
+
+/* ---------------- clock ---------------- */
+function tickClock(){ $('footClock').textContent='Last sync '+new Date().toLocaleTimeString('en-GB'); }
+setInterval(tickClock,1000); tickClock();
+
+/* ---------------- units ---------------- */
+function fmtDist(m){
+  const n=Number(m||0);
+  return unitSystem==='metric' ? `${Math.round(n)}m` : `${Math.round(n*3.281)}ft`;
+}
+function fmtSpeed(kmh){
+  const n=Number(kmh||0);
+  return unitSystem==='metric' ? Math.round(n) : Math.round(n*0.621371);
+}
+$('unitsBtn').addEventListener('click',()=>{
+  unitSystem=unitSystem==='metric'?'imperial':'metric';
+  localStorage.setItem('trafiq_units',unitSystem);
+  applyUnits();
+  showToast('Units switched to '+unitSystem+'.');
+});
+function applyUnits(){
+  $('unitsBtn').textContent=unitSystem==='metric'?'Metric (km/h, m)':'Imperial (mph, ft)';
+  $('avgSpeedLabel').textContent=unitSystem==='metric'?'Avg Speed km/h':'Avg Speed mph';
+}
+applyUnits();
+
+/* ---------------- dashboard ---------------- */
+let volumeChart=null;
+let mixChart=null;
+function initCharts(){
+  const volCtx=$('volumeChart').getContext('2d');
+  volumeChart=new Chart(volCtx,{type:'line',data:{labels:[],datasets:[{label:'Vehicles / analysis',data:[],borderColor:'#0891A8',backgroundColor:'rgba(8,145,168,0.12)',fill:true,tension:.35,pointRadius:2,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9AA2B4',font:{family:'JetBrains Mono',size:10}},grid:{color:'#EDF0F5'}},y:{ticks:{color:'#9AA2B4',font:{family:'JetBrains Mono',size:10}},grid:{color:'#EDF0F5'},beginAtZero:true}}}});
+  const mixCtx=$('mixChart').getContext('2d');
+  mixChart=new Chart(mixCtx,{type:'doughnut',data:{labels:['Cars','Motorcycles','Buses','Trucks'],datasets:[{data:[0,0,0,0],backgroundColor:['#0891A8','#C2790C','#0E8F60','#D6393F'],borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false}}}});
+}
+function renderMixLegend(counts){
+  const labels=['Cars','Motorcycles','Buses','Trucks'];
+  const vals=[counts.car||0,counts.motorcycle||0,counts.bus||0,counts.truck||0];
+  const colors=['#0891A8','#C2790C','#0E8F60','#D6393F'];
+  $('mixLegend').innerHTML=labels.map((l,i)=>`<div class="legend-item"><span class="legend-swatch" style="background:${colors[i]}"></span>${l} · ${vals[i]}</div>`).join('');
+}
+function renderDashboard(data){
+  const counts=data.counts||{car:0,motorcycle:0,bus:0,truck:0};
+  const total=Number(data.total_vehicles||0);
+  const density=data.density||'LOW';
+  $('totVeh').textContent=total;
+  $('queueLen').textContent=fmtDist(data.queue_length_m);
+  $('avgSpeed').textContent=fmtSpeed(data.avg_speed_kmh);
+  $('waitTime').textContent=Math.round(data.avg_wait_seconds||0)+'s';
+  $('recTime').textContent=data.recommended_green_seconds??20;
+  $('queueVal').textContent=fmtDist(data.queue_length_m);
+  $('mCars').textContent=counts.car||0;
+  $('mBikes').textContent=counts.motorcycle||0;
+  $('mBuses').textContent=counts.bus||0;
+  $('mTrucks').textContent=counts.truck||0;
+  $('heroDensityWord').textContent=density;
+  const badge=$('densityBadge');
+  badge.className='density-badge '+density;
+  badge.textContent='● '+density+' DENSITY';
+  $('trackingStatus').textContent=data.last_analysis ? `AI ANALYSIS · ${total} VEHICLES` : 'NO ANALYSIS YET';
+  if(data.last_analysis) $('heroCamTag').textContent=`${selectedJunctionId} · ${$('heroJunctionName').textContent.replace(/\u00a0/g,' ')} · LATEST AI ANALYSIS`;
+
+  if(data.history?.length){
+    volumeChart.data.labels=data.history.map((_,i)=>`#${i+1}`);
+    volumeChart.data.datasets[0].data=data.history;
+    volumeChart.update('none');
+  } else {
+    volumeChart.data.labels=[]; volumeChart.data.datasets[0].data=[]; volumeChart.update('none');
+  }
+  mixChart.data.datasets[0].data=[counts.car||0,counts.motorcycle||0,counts.bus||0,counts.truck||0];
+  mixChart.update('none');
+  renderMixLegend(counts);
+
+  const emg=data.emergency||{};
+  const banner=$('emgBanner');
+  if(emg.detected){
+    $('emgText').textContent=`${emg.type||'Emergency vehicle'} detected — ${emg.arm||'approach'}. Priority green recommended.`;
+    banner.classList.add('show');
+  } else banner.classList.remove('show');
+}
+async function loadDashboard(){
+  try{
+    const data=await api('/api/dashboard?junction_id='+encodeURIComponent(selectedJunctionId));
+    renderDashboard(data);
+    $('trackingStatus').title='Connected to FastAPI backend';
+  }catch(err){
+    $('trackingStatus').textContent='BACKEND OFFLINE';
+    $('trackingStatus').style.color='var(--red)';
+    showToast('Backend unavailable: '+err.message,false);
+  }
+}
+
+/* ---------------- junctions ---------------- */
+function selectJunction(j){
+  selectedJunctionId=j.id;
+  $('heroJunctionName').innerHTML=escapeHtml(j.name).replace(/ /g,'&nbsp;');
+  $('heroCamTag').textContent=j.id+' · '+j.name.toUpperCase()+' · LATEST AI ANALYSIS';
+  showView('dashboard');
+  loadDashboard();
+}
+async function loadJunctions(){
+  try{
+    junctions=await api('/api/junctions');
+    renderJunctions();
+    const selected=junctions.find(j=>j.id===selectedJunctionId)||junctions[0];
+    if(selected){ selectedJunctionId=selected.id; $('heroJunctionName').innerHTML=escapeHtml(selected.name).replace(/ /g,'&nbsp;'); }
+  }catch(err){
+    $('junctionRows').innerHTML=`<tr><td colspan="6" style="color:var(--red);font-family:var(--mono);font-size:12px;">Cannot load junctions: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+function renderJunctions(){
+  const filtered=searchTerm?junctions.filter(j=>j.name.toLowerCase().includes(searchTerm)||j.id.toLowerCase().includes(searchTerm)):junctions;
+  $('junctionCountTag').textContent=filtered.length+' OF '+junctions.length+' CONNECTED';
+  if(!filtered.length){
+    $('junctionRows').innerHTML='<tr><td colspan="6" style="color:var(--text-faint);font-family:var(--mono);font-size:12px;">No junctions found.</td></tr>';
+    return;
+  }
+  $('junctionRows').innerHTML=filtered.map(j=>{
+    const latest=j.latest;
+    const total=latest?.total_vehicles??0;
+    const dens=latest?.density||'LOW';
+    return `<tr style="cursor:pointer" data-id="${escapeHtml(j.id)}">
+      <td><div class="jname">${escapeHtml(j.name)}</div><div class="panel-tag">${escapeHtml(j.id)}</div></td>
+      <td><span class="jstatus"><span class="dot ${j.online?'on':'off'}"></span>${j.online?'Online':'Offline'}</span></td>
+      <td class="jnum">${total}</td><td><span class="densechip ${dens}">${dens}</span></td>
+      <td class="jnum">${fmtDist(latest?.queue_length_m||0)}</td>
+      <td class="jnum">${latest?.recommended_green_seconds??20}s</td>
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('#junctionRows tr[data-id]').forEach(tr=>tr.addEventListener('click',()=>{
+    const j=junctions.find(x=>x.id===tr.dataset.id); if(j) selectJunction(j);
+  }));
+}
+$('addJunctionBtn').addEventListener('click',async()=>{
+  const name=prompt('New junction name');
+  if(!name?.trim()) return;
+  try{
+    const created=await api('/api/junctions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim()})});
+    await loadJunctions();
+    showToast('Junction added: '+created.name);
+  }catch(err){showToast('Could not add junction: '+err.message,true);}
+});
+
+/* ---------------- settings ---------------- */
+function syncSettingsUI(){
+  const map={high_density_alerts:'toggleHighDensity',emergency_priority:'toggleEmergency',camera_health_alerts:'toggleCameraHealth',weekly_analytics_email:'toggleWeeklyEmail'};
+  Object.entries(map).forEach(([key,id])=>$(id).classList.toggle('on',!!settings[key]));
+  $('thresholdSlider').value=settings.high_density_threshold;
+  $('thresholdVal').textContent=settings.high_density_threshold;
+}
+async function loadSettings(){
+  try{ settings=await api('/api/settings'); syncSettingsUI(); }catch(err){showToast('Could not load settings: '+err.message,true);}
+}
+async function saveSettings(){
+  try{
+    settings={
+      high_density_alerts:$('toggleHighDensity').classList.contains('on'),
+      emergency_priority:$('toggleEmergency').classList.contains('on'),
+      camera_health_alerts:$('toggleCameraHealth').classList.contains('on'),
+      weekly_analytics_email:$('toggleWeeklyEmail').classList.contains('on'),
+      high_density_threshold:Number($('thresholdSlider').value),
+    };
+    await api('/api/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(settings)});
+    showToast('Settings saved to backend.');
+  }catch(err){showToast('Could not save settings: '+err.message,true);}
+}
+document.querySelectorAll('[data-toggle]').forEach(t=>t.addEventListener('click',()=>{t.classList.toggle('on'); saveSettings();}));
+$('thresholdSlider').addEventListener('change',saveSettings);
+document.querySelectorAll('.tswatch').forEach(sw=>sw.addEventListener('click',()=>{
+  document.querySelectorAll('.tswatch').forEach(s=>s.classList.remove('active'));
+  sw.classList.add('active');
+  document.documentElement.setAttribute('data-theme',sw.dataset.theme);
+  localStorage.setItem('trafiq_theme',sw.dataset.theme);
+  showToast('Theme set to '+sw.dataset.theme+'.');
+}));
+const savedTheme=localStorage.getItem('trafiq_theme')||'light';
+document.documentElement.setAttribute('data-theme',savedTheme);
+document.querySelectorAll('.tswatch').forEach(s=>s.classList.toggle('active',s.dataset.theme===savedTheme));
+
+$('toggleCompact').addEventListener('click',()=>document.body.classList.toggle('compact',$('toggleCompact').classList.contains('on')));
+
+/* ---------------- upload & REAL AI analysis ---------------- */
+const dropZone=$('dropZone'), fileInput=$('fileInput');
+function fmtBytes(b){if(b<1024)return b+' B';if(b<1024*1024)return(b/1024).toFixed(1)+' KB';return(b/(1024*1024)).toFixed(1)+' MB';}
+function fmtDuration(s){if(!isFinite(s))return'—';const m=Math.floor(s/60),r=Math.round(s%60);return m+':'+String(r).padStart(2,'0');}
+function clearUpload(){
+  if(analysisPollTimer) clearTimeout(analysisPollTimer);
+  $('fileRowHolder').innerHTML=''; $('progressWrap').classList.remove('show'); $('resultCard').classList.remove('show'); fileInput.value='';
+  if(currentObjectUrl){URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=null;}
+}
+function handleFile(file){
+  if(!file)return;
+  const allowed=['video/mp4','video/avi','video/quicktime','video/x-matroska','video/webm'];
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(!['mp4','avi','mov','mkv','webm'].includes(ext)){showToast('Unsupported video format.',true);return;}
+  currentFileName=file.name;
+  if(currentObjectUrl)URL.revokeObjectURL(currentObjectUrl);
+  currentObjectUrl=URL.createObjectURL(file);
+  $('fileRowHolder').innerHTML=`<div class="file-row"><div class="file-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="15" height="16" rx="2"/><path d="M22 8l-5 3.5L22 15V8z"/></svg></div><div class="file-meta"><div class="file-name">${escapeHtml(file.name)}</div><div class="file-size" id="fileSizeLine">${fmtBytes(file.size)} · ${escapeHtml(file.type||'video')}</div></div><div class="file-remove" id="fileRemoveBtn">✕</div></div><video id="videoPreview" src="${currentObjectUrl}" controls muted style="width:100%;border-radius:12px;margin-top:12px;background:#000;max-height:260px"></video>`;
+  $('videoPreview').addEventListener('loadedmetadata',()=>{currentDuration=$('videoPreview').duration||0;$('fileSizeLine').textContent=`${fmtBytes(file.size)} · ${file.type||'video'} · ${fmtDuration(currentDuration)}`;});
+  $('fileRemoveBtn').addEventListener('click',clearUpload);
+  runRealAnalysis(file);
+}
+async function runRealAnalysis(file){
+  $('progressWrap').classList.add('show');
+  $('resultCard').classList.remove('show');
+  const stages=['Uploading video','Queued for AI analysis','Running YOLO detection + tracking','Computing traffic intelligence','Generating signal recommendation'];
+  $('stageList').innerHTML=stages.map((s,i)=>`<div class="stage-item" data-i="${i}"><div class="si-dot"></div><span>${s}</span></div>`).join('');
+  $('progressFill').style.width='5%'; $('progressPct').textContent='5%'; $('progressStageLabel').textContent='Uploading video…';
+  const form=new FormData(); form.append('file',file); form.append('junction_id',selectedJunctionId);
+  try{
+    const queued=await api('/api/analyze',{method:'POST',body:form});
+    markStage(0);
+    await pollJob(queued.job_id);
+  }catch(err){
+    $('progressStageLabel').textContent='Analysis failed'; $('progressPct').textContent='0%'; $('progressFill').style.width='0%';
+    showToast('AI analysis failed: '+err.message,true);
+  }
+}
+function markStage(index){
+  document.querySelectorAll('.stage-item').forEach((el,i)=>{
+    el.classList.remove('active','done');
+    if(i<index)el.classList.add('done');
+    if(i===index)el.classList.add('active');
+  });
+}
+async function pollJob(jobId){
+  const job=await api('/api/jobs/'+encodeURIComponent(jobId));
+  $('progressFill').style.width=Math.max(5,job.progress||0)+'%'; $('progressPct').textContent=(job.progress||0)+'%'; $('progressStageLabel').textContent=(job.message||job.status)+'…';
+  if(job.status==='completed'){
+    document.querySelectorAll('.stage-item').forEach(el=>el.classList.add('done'));
+    showRealResults(job.result||{});
+    await loadRecentAnalyses();
+    await loadDashboard();
+    showToast('Real YOLO traffic analysis completed.');
+    return;
+  }
+  if(job.status==='failed'){throw new Error(job.error||'Backend analysis failed.');}
+  markStage(job.progress>60?2:job.progress>5?1:0);
+  analysisPollTimer=setTimeout(()=>pollJob(jobId).catch(err=>showToast(err.message,true)),1200);
+}
+function showRealResults(result){
+  const total=result.total_vehicles||0, dens=result.density||'LOW', queue=result.queue_length_m||0, rec=result.recommended_green_seconds||20;
+  $('resultMeta').textContent=`Processed ${result.frames_processed||0} frames · ${fmtDuration(result.duration_seconds||0)} clip · ${result.unique_tracks||0} unique tracks`;
+  $('resultGrid').innerHTML=`<div class="result-chip"><div class="n">${total}</div><div class="l">Total Vehicles</div></div><div class="result-chip"><div class="n">${dens}</div><div class="l">Density</div></div><div class="result-chip"><div class="n">${fmtDist(queue)}</div><div class="l">Queue Length</div></div><div class="result-chip"><div class="n">${rec}s</div><div class="l">Rec. Green Time</div></div>`;
+  $('resultCard').classList.add('show');
+}
+dropZone.addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',e=>handleFile(e.target.files[0]));
+['dragenter','dragover'].forEach(evt=>dropZone.addEventListener(evt,e=>{e.preventDefault();dropZone.classList.add('drag');}));
+['dragleave','drop'].forEach(evt=>dropZone.addEventListener(evt,e=>{e.preventDefault();dropZone.classList.remove('drag');}));
+dropZone.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)handleFile(f);});
+$('analyzeAnother').addEventListener('click',clearUpload);
+
+/* ---------------- recent analyses ---------------- */
+async function loadRecentAnalyses(){
+  try{
+    const rows=await api('/api/analyses?limit=10&junction_id='+encodeURIComponent(selectedJunctionId));
+    $('recentCount').textContent=rows.length+' SAVED ANALYSES';
+    $('recentAnalysesBody').innerHTML=rows.length?rows.map(r=>`<tr><td><div class="jname" style="font-size:13px">${escapeHtml(r.filename)}</div><div class="panel-tag">${new Date(r.created_at).toLocaleString()}</div></td><td class="jnum">${r.total_vehicles}</td><td><span class="densechip ${r.density}">${r.density}</span></td><td class="jnum">${r.recommended_green_seconds}s</td></tr>`).join(''):'<tr><td colspan="4" style="color:var(--text-faint);font-family:var(--mono);font-size:12px">No saved analyses for this junction yet.</td></tr>';
+  }catch(err){$('recentAnalysesBody').innerHTML=`<tr><td colspan="4" style="color:var(--red);font-family:var(--mono);font-size:12px">Cannot load analysis history.</td></tr>`;}
+}
+
+/* ---------------- helpers ---------------- */
+function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+
+/* ---------------- startup + polling ---------------- */
+async function boot(){
+  initCharts();
+  syncSettingsUI();
+  try{
+    const health=await api('/api/health');
+    $('trackingStatus').textContent=health.yolo_available?'BACKEND ONLINE · YOLO READY':'BACKEND ONLINE · YOLO UNAVAILABLE';
+    $('trackingStatus').style.color='';
+  }catch(err){
+    $('trackingStatus').textContent='BACKEND OFFLINE';
+    $('trackingStatus').style.color='var(--red)';
+  }
+  await loadJunctions();
+  await loadSettings();
+  await loadDashboard();
+  await loadRecentAnalyses();
+  setInterval(loadDashboard,5000);
+  setInterval(loadJunctions,10000);
+}
+boot();
+</script>
+</body>
+</html>

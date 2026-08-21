@@ -1,0 +1,8 @@
+backend/.venv/
+backend/__pycache__/
+backend/*.pyc
+data/uploads/*
+data/trafiq.db
+*.pt
+*.onnx
+.env
